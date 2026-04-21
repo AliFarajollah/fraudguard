@@ -1,0 +1,66 @@
+### Variables
+@baseUrl = http://localhost:3000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc3NjczMTQxMCwiZXhwIjoxNzc2ODE3ODEwfQ.8IHClPC11RfwgmP05E_op0ShZyFpr8CBLp_9o56A91w
+
+### 1. Register a new user
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password123",
+  "role": "admin"
+}
+
+### 2. Login with the same credentials
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+### 3. Get current user profile (PROTECTED — needs token)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+### 4. Same request without token — should return 401 Unauthorized
+GET {{baseUrl}}/auth/me
+
+### 5. Try registering the same email again — should return 409 Conflict
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "anything",
+  "role": "analyst"
+}
+
+### 6. Try logging in with wrong password — should return 401
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "WRONG"
+}
+
+### 7. Register with invalid email (DTO validation test) — should return 400
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "not-an-email",
+  "password": "password123"
+}
+
+### 8. Register with short password (DTO validation test) — should return 400
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "test2@example.com",
+  "password": "123"
+}
