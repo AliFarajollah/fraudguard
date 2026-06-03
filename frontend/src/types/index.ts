@@ -1,8 +1,8 @@
-// Shape of a user, as returned by the NestJS API (auth.service strips passwordHash)
 export interface User {
     id: number;
     email: string;
     role: 'admin' | 'analyst' | 'viewer';
+    status: 'pending' | 'active' | 'rejected';
     createdAt: string;
 }
 
@@ -56,3 +56,71 @@ export interface PredictionResponse {
     threshold: number;
     model_version: string;
 }
+
+// ── New interfaces for Transactions, Predictions, Reviews ────────────────────
+
+/** A review submitted by an analyst. */
+export interface Review {
+    id: number;
+    decision: 'confirmed_fraud' | 'false_positive' | 'needs_investigation';
+    notes: string | null;
+    reviewedAt: string;
+    analyst: User;
+}
+
+/** The ML model's prediction for a transaction. */
+export interface Prediction {
+    id: number;
+    fraudProbability: number;
+    predictedLabel: boolean;
+    modelVersion: string;
+    createdAt: string;
+    transaction?: Transaction;
+    review?: Review | null;
+}
+
+/** A credit card transaction submitted for fraud scoring. */
+export interface Transaction {
+    id: number;
+    amount: number;
+    occurredAt: string;
+    status: 'pending' | 'scored' | 'reviewed';
+    features: Record<string, number>;
+    createdAt: string;
+    uploadedBy: User;
+    prediction?: Prediction | null;
+}
+
+/** Generic paginated API response wrapper. */
+export interface PaginatedResponse<T> {
+    data: T[];
+    total: number;
+    page: number;
+    limit: number;
+}
+
+/** Aggregate stats returned by GET /transactions/stats */
+export interface TransactionStats {
+    total: number;
+    pending: number;
+    scored: number;
+    confirmed_fraud: number;
+    false_positive: number;
+}
+
+/** Aggregate stats returned by GET /predictions/stats */
+export interface PredictionStats {
+    total: number;
+    fraud_count: number;
+    legit_count: number;
+    avg_fraud_probability: number;
+    reviewed_count: number;
+}
+
+/** Aggregate stats returned by GET /reviews/stats */
+export interface ReviewStats {
+    total: number;
+    confirmed_fraud: number;
+    false_positive: number;
+    needs_investigation: number;
+}

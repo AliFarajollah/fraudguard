@@ -28,64 +28,63 @@ export function DashboardPage() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen page-bg">
             <NavBar />
 
             <main className="max-w-7xl mx-auto px-6 py-8">
                 <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-slate-900">Model Dashboard</h2>
-                    <p className="text-slate-600 mt-1">
-                        Real-time metrics from the fraud detection model in production.
+                    <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                        Model Dashboard
+                    </h2>
+                    <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        Real-time performance metrics from the deployed fraud detection model.
                     </p>
                 </div>
 
                 {isLoading && (
-                    <div className="bg-white rounded-lg shadow p-8 text-center text-slate-500">
+                    <div className="card p-8 text-center" style={{ color: 'var(--text-muted)' }}>
                         Loading model metrics…
                     </div>
                 )}
 
-                {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">
-                        {error}
-                    </div>
-                )}
+                {error && <div className="alert-danger">{error}</div>}
 
                 {modelInfo && !isLoading && (
                     <>
                         {/* Model summary header */}
-                        <div className="bg-white rounded-lg shadow p-6 mb-6">
+                        <div className="card p-6 mb-6">
                             <div className="flex items-center justify-between flex-wrap gap-4">
                                 <div>
-                                    <div className="text-sm text-slate-500 uppercase tracking-wide">
+                                    <div className="text-xs font-semibold uppercase tracking-wider"
+                                         style={{ color: 'var(--text-muted)' }}>
                                         Active Model
                                     </div>
-                                    <div className="text-2xl font-bold text-slate-900 mt-1">
+                                    <div className="text-xl font-bold mt-1"
+                                         style={{ color: 'var(--text-primary)' }}>
                                         {modelInfo.model_name}{' '}
-                                        <span className="text-slate-400 text-base font-normal">
+                                        <span className="text-sm font-normal"
+                                              style={{ color: 'var(--text-muted)' }}>
                                             v{modelInfo.model_version}
                                         </span>
                                     </div>
                                 </div>
-                                <div className="flex gap-6 text-sm text-slate-600">
-                                    <div>
-                                        <div className="text-slate-400 text-xs uppercase">Features</div>
-                                        <div className="font-semibold text-slate-800">
-                                            {modelInfo.n_features}
+                                <div className="flex gap-8 text-sm">
+                                    {[
+                                        { label: 'Features', value: modelInfo.n_features },
+                                        { label: 'Training Samples', value: modelInfo.training_samples.toLocaleString() },
+                                        { label: 'Test Samples', value: modelInfo.test_samples.toLocaleString() },
+                                    ].map((item) => (
+                                        <div key={item.label}>
+                                            <div className="text-xs uppercase tracking-wider"
+                                                 style={{ color: 'var(--text-muted)' }}>
+                                                {item.label}
+                                            </div>
+                                            <div className="font-semibold"
+                                                 style={{ color: 'var(--text-primary)' }}>
+                                                {item.value}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div>
-                                        <div className="text-slate-400 text-xs uppercase">Training Samples</div>
-                                        <div className="font-semibold text-slate-800">
-                                            {modelInfo.training_samples.toLocaleString()}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div className="text-slate-400 text-xs uppercase">Test Samples</div>
-                                        <div className="font-semibold text-slate-800">
-                                            {modelInfo.test_samples.toLocaleString()}
-                                        </div>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -126,76 +125,62 @@ export function DashboardPage() {
 
                         {/* Model comparison table */}
                         {modelInfo.all_models_compared && (
-                            <div className="bg-white rounded-lg shadow overflow-hidden">
-                                <div className="px-6 py-4 border-b border-slate-200">
-                                    <h3 className="text-lg font-bold text-slate-900">
+                            <div className="card overflow-hidden">
+                                <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border-default)' }}>
+                                    <h3 className="text-lg font-bold"
+                                        style={{ color: 'var(--text-primary)' }}>
                                         Model Comparison
                                     </h3>
-                                    <p className="text-sm text-slate-500">
-                                        All candidates evaluated. The best model by PR-AUC was
-                                        selected for deployment.
+                                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                                        All candidates evaluated. The best model by PR-AUC was selected for deployment.
                                     </p>
                                 </div>
                                 <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-slate-200">
-                                        <thead className="bg-slate-50">
+                                    <table className="min-w-full">
+                                        <thead className="table-header">
                                             <tr>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                                    Model
-                                                </th>
-                                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                                    Precision
-                                                </th>
-                                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                                    Recall
-                                                </th>
-                                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                                    F1
-                                                </th>
-                                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                                    ROC-AUC
-                                                </th>
-                                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                                    PR-AUC
-                                                </th>
-                                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                                    Train Time
-                                                </th>
+                                                {['Model', 'Precision', 'Recall', 'F1', 'ROC-AUC', 'PR-AUC', 'Train Time'].map((h) => (
+                                                    <th key={h}
+                                                        className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider ${h === 'Model' ? 'text-left' : 'text-right'}`}
+                                                        style={{ color: 'var(--text-muted)' }}>
+                                                        {h}
+                                                    </th>
+                                                ))}
                                             </tr>
                                         </thead>
-                                        <tbody className="bg-white divide-y divide-slate-200">
+                                        <tbody>
                                             {Object.entries(modelInfo.all_models_compared).map(
                                                 ([name, m]) => {
                                                     const isWinner = name === modelInfo.model_name;
                                                     return (
-                                                        <tr
-                                                            key={name}
-                                                            className={isWinner ? 'bg-blue-50' : ''}
-                                                        >
-                                                            <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                                                        <tr key={name}
+                                                            className="table-row-hover"
+                                                            style={{
+                                                                borderBottom: '1px solid var(--table-divider)',
+                                                                background: isWinner ? 'var(--brand-primary-soft)' : undefined,
+                                                            }}>
+                                                            <td className="px-6 py-4 text-sm font-medium"
+                                                                style={{ color: 'var(--text-primary)' }}>
                                                                 {name}
                                                                 {isWinner && (
-                                                                    <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-blue-600 text-white rounded-full">
+                                                                    <span className="ml-2 badge"
+                                                                          style={{
+                                                                              background: 'var(--brand-primary)',
+                                                                              color: 'var(--text-inverse)',
+                                                                              fontSize: '10px',
+                                                                          }}>
                                                                         SELECTED
                                                                     </span>
                                                                 )}
                                                             </td>
-                                                            <td className="px-6 py-4 text-sm text-right text-slate-600 font-mono">
-                                                                {m.precision.toFixed(4)}
-                                                            </td>
-                                                            <td className="px-6 py-4 text-sm text-right text-slate-600 font-mono">
-                                                                {m.recall.toFixed(4)}
-                                                            </td>
-                                                            <td className="px-6 py-4 text-sm text-right text-slate-600 font-mono">
-                                                                {m.f1.toFixed(4)}
-                                                            </td>
-                                                            <td className="px-6 py-4 text-sm text-right text-slate-600 font-mono">
-                                                                {m.roc_auc.toFixed(4)}
-                                                            </td>
-                                                            <td className="px-6 py-4 text-sm text-right text-slate-600 font-mono font-semibold">
-                                                                {m.pr_auc.toFixed(4)}
-                                                            </td>
-                                                            <td className="px-6 py-4 text-sm text-right text-slate-600 font-mono">
+                                                            {[m.precision, m.recall, m.f1, m.roc_auc, m.pr_auc].map((v, i) => (
+                                                                <td key={i} className="px-6 py-4 text-sm text-right font-mono"
+                                                                    style={{ color: 'var(--text-secondary)' }}>
+                                                                    {v.toFixed(4)}
+                                                                </td>
+                                                            ))}
+                                                            <td className="px-6 py-4 text-sm text-right font-mono"
+                                                                style={{ color: 'var(--text-secondary)' }}>
                                                                 {m.train_time_seconds.toFixed(2)}s
                                                             </td>
                                                         </tr>

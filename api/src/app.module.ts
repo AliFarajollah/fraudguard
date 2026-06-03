@@ -1,17 +1,30 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { TransactionsModule } from './transactions/transactions.module';
+import { PredictionsModule } from './predictions/predictions.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+
+    // ── Rate Limiting ────────────────────────────────────────────────────────
+    // Applied globally; individual routes can override with @Throttle().
+    // Default: 100 requests per 60 seconds per IP (general API protection).
+    // Auth endpoints apply stricter limits via @Throttle in auth.controller.ts.
+    ThrottlerModule.forRoot([{
+      ttl: 60000,   // 60 seconds window (milliseconds)
+      limit: 100,   // 100 requests per window per IP
+    }]),
 
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -23,13 +36,16 @@ import { AuthModule } from './auth/auth.module';
         password: config.get<string>('DB_PASSWORD'),
         database: config.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: true,   // auto-migrates schema changes in dev
         logging: true,
       }),
     }),
 
     UsersModule,
     AuthModule,
+    TransactionsModule,
+    PredictionsModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

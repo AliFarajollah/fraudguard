@@ -9,14 +9,12 @@ import {
     emptyTransaction,
 } from '../fixtures/sampleTransactions';
 
-// The 28 anonymised PCA feature names, used to generate inputs
 const V_FEATURES: (keyof TransactionFeatures)[] = [
     'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8',
     'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16',
     'V17', 'V18', 'V19', 'V20', 'V21', 'V22', 'V23', 'V24',
     'V25', 'V26', 'V27', 'V28',
 ];
-
 
 export function ScorePage() {
     const [features, setFeatures] = useState<TransactionFeatures>(emptyTransaction());
@@ -25,7 +23,6 @@ export function ScorePage() {
     const [error, setError] = useState<string | null>(null);
 
     const updateField = (name: keyof TransactionFeatures, value: string) => {
-        // Parse but allow empty string while typing
         const num = value === '' || value === '-' ? 0 : parseFloat(value);
         setFeatures((prev) => ({
             ...prev,
@@ -40,10 +37,7 @@ export function ScorePage() {
         setIsSubmitting(true);
 
         try {
-            const { data } = await mlClient.post<PredictionResponse>(
-                '/predict',
-                features,
-            );
+            const { data } = await mlClient.post<PredictionResponse>('/predict', features);
             setPrediction(data);
         } catch (err) {
             if (axios.isAxiosError(err) && err.response) {
@@ -58,51 +52,42 @@ export function ScorePage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen page-bg">
             <NavBar />
 
             <main className="max-w-6xl mx-auto px-6 py-8">
                 <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-slate-900">
+                    <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
                         Transaction Scoring
                     </h2>
-                    <p className="text-slate-600 mt-1">
-                        Submit transaction features and receive a real-time fraud
-                        probability from the XGBoost model.
+                    <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+                        Submit transaction features and receive a real-time fraud probability from the XGBoost model.
                     </p>
                 </div>
 
-                <div className="bg-white rounded-lg shadow p-6">
+                <div className="card p-6">
                     {/* Action buttons */}
                     <div className="flex flex-wrap gap-3 mb-6">
                         <button
                             type="button"
-                            onClick={() => {
-                                setFeatures(LEGITIMATE_EXAMPLE);
-                                setPrediction(null);
-                            }}
-                            className="px-4 py-2 bg-green-100 text-green-800 font-medium rounded-lg hover:bg-green-200 transition-colors"
+                            onClick={() => { setFeatures(LEGITIMATE_EXAMPLE); setPrediction(null); }}
+                            className="btn-ghost text-sm"
+                            style={{ borderColor: 'var(--status-success)', color: 'var(--status-success)' }}
                         >
                             Load Legitimate Example
                         </button>
                         <button
                             type="button"
-                            onClick={() => {
-                                setFeatures(FRAUD_EXAMPLE);
-                                setPrediction(null);
-                            }}
-                            className="px-4 py-2 bg-red-100 text-red-800 font-medium rounded-lg hover:bg-red-200 transition-colors"
+                            onClick={() => { setFeatures(FRAUD_EXAMPLE); setPrediction(null); }}
+                            className="btn-ghost text-sm"
+                            style={{ borderColor: 'var(--status-danger)', color: 'var(--status-danger)' }}
                         >
                             Load Fraud Example
                         </button>
                         <button
                             type="button"
-                            onClick={() => {
-                                setFeatures(emptyTransaction());
-                                setPrediction(null);
-                                setError(null);
-                            }}
-                            className="px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                            onClick={() => { setFeatures(emptyTransaction()); setPrediction(null); setError(null); }}
+                            className="btn-ghost text-sm"
                         >
                             Clear
                         </button>
@@ -112,136 +97,123 @@ export function ScorePage() {
                         {/* Amount + Time */}
                         <div className="grid grid-cols-2 gap-4 mb-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                    Amount
-                                </label>
+                                <label className="block text-sm font-medium mb-1"
+                                       style={{ color: 'var(--text-secondary)' }}>Amount</label>
                                 <input
-                                    type="number"
-                                    step="any"
-                                    value={features.Amount}
+                                    type="number" step="any" value={features.Amount}
                                     onChange={(e) => updateField('Amount', e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="input-field w-full"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                    Time
-                                </label>
+                                <label className="block text-sm font-medium mb-1"
+                                       style={{ color: 'var(--text-secondary)' }}>Time</label>
                                 <input
-                                    type="number"
-                                    step="any"
-                                    value={features.Time}
+                                    type="number" step="any" value={features.Time}
                                     onChange={(e) => updateField('Time', e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="input-field w-full"
                                 />
                             </div>
                         </div>
 
-                        {/* V1–V28 features in a responsive grid */}
+                        {/* V1–V28 */}
                         <div className="mb-6">
-                            <div className="text-sm font-medium text-slate-700 mb-2">
+                            <div className="text-sm font-medium mb-2"
+                                 style={{ color: 'var(--text-secondary)' }}>
                                 PCA Features (V1–V28)
                             </div>
                             <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
                                 {V_FEATURES.map((name) => (
                                     <div key={name}>
-                                        <label className="block text-xs text-slate-500 mb-0.5">
-                                            {name}
-                                        </label>
+                                        <label className="block text-xs mb-0.5"
+                                               style={{ color: 'var(--text-muted)' }}>{name}</label>
                                         <input
-                                            type="number"
-                                            step="any"
-                                            value={features[name]}
+                                            type="number" step="any" value={features[name]}
                                             onChange={(e) => updateField(name, e.target.value)}
-                                            className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 outline-none font-mono"
+                                            className="input-field w-full text-sm font-mono"
+                                            style={{ padding: '4px 8px' }}
                                         />
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
-                        >
+                        <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
                             {isSubmitting ? 'Scoring…' : 'Score This Transaction'}
                         </button>
                     </form>
 
-                    {/* Error banner */}
-                    {error && (
-                        <div className="mt-6 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3">
-                            {error}
-                        </div>
-                    )}
-
-                    {/* Prediction result */}
-                    {prediction && (
-                        <PredictionResult prediction={prediction} />
-                    )}
+                    {error && <div className="alert-danger mt-6">{error}</div>}
+                    {prediction && <PredictionResult prediction={prediction} />}
                 </div>
             </main>
         </div>
     );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Prediction result component — the "wow" visual
-// ─────────────────────────────────────────────────────────────
+// ─── Professional Prediction Result ──────────────────────────────────────────
 function PredictionResult({ prediction }: { prediction: PredictionResponse }) {
     const isFraud = prediction.predicted_label;
     const probPercent = (prediction.fraud_probability * 100).toFixed(2);
 
-    const bgColor = isFraud ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200';
-    const iconColor = isFraud ? 'text-red-600' : 'text-green-600';
-    const headingColor = isFraud ? 'text-red-800' : 'text-green-800';
-    const label = isFraud ? 'FRAUD DETECTED' : 'LEGITIMATE';
-    const icon = isFraud ? '🚨' : '✓';
-
     return (
-        <div className={`mt-6 border-2 rounded-xl p-6 ${bgColor}`}>
+        <div className="mt-6 rounded-xl p-6"
+             style={{
+                 background: isFraud ? 'var(--status-danger-soft)' : 'var(--status-success-soft)',
+                 border: `2px solid ${isFraud ? 'var(--status-danger-border)' : 'var(--status-success-border)'}`,
+             }}>
             <div className="flex items-start gap-4">
-                <div className={`text-5xl ${iconColor}`}>{icon}</div>
+                {/* Status indicator — a professional dot, not an emoji */}
+                <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                     style={{
+                         background: isFraud ? 'var(--status-danger)' : 'var(--status-success)',
+                         color: 'white',
+                     }}>
+                    {isFraud ? (
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                            <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+                        </svg>
+                    ) : (
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                    )}
+                </div>
                 <div className="flex-1">
-                    <div className={`text-2xl font-bold ${headingColor}`}>{label}</div>
+                    <div className="text-xl font-bold"
+                         style={{ color: isFraud ? 'var(--status-danger-text)' : 'var(--status-success-text)' }}>
+                        {isFraud ? 'FRAUD DETECTED' : 'LEGITIMATE'}
+                    </div>
                     <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                            <div className="text-slate-500 uppercase text-xs">
-                                Fraud Probability
+                        {[
+                            { label: 'Fraud Probability', value: `${probPercent}%` },
+                            { label: 'Decision Threshold', value: `${(prediction.threshold * 100).toFixed(0)}%` },
+                            { label: 'Predicted', value: isFraud ? 'Fraud' : 'Legitimate' },
+                            { label: 'Model', value: `XGBoost v${prediction.model_version.replace(/^v/, '')}` },
+                        ].map((item) => (
+                            <div key={item.label}>
+                                <div className="text-xs uppercase font-semibold tracking-wider"
+                                     style={{ color: 'var(--text-muted)' }}>
+                                    {item.label}
+                                </div>
+                                <div className="font-mono font-semibold text-lg mt-0.5"
+                                     style={{ color: 'var(--text-primary)' }}>
+                                    {item.value}
+                                </div>
                             </div>
-                            <div className="font-mono font-semibold text-lg text-slate-800">
-                                {probPercent}%
-                            </div>
-                        </div>
-                        <div>
-                            <div className="text-slate-500 uppercase text-xs">
-                                Decision Threshold
-                            </div>
-                            <div className="font-mono font-semibold text-lg text-slate-800">
-                                {(prediction.threshold * 100).toFixed(0)}%
-                            </div>
-                        </div>
-                        <div>
-                            <div className="text-slate-500 uppercase text-xs">Predicted</div>
-                            <div className="font-mono font-semibold text-lg text-slate-800">
-                                {isFraud ? 'Fraud' : 'Legitimate'}
-                            </div>
-                        </div>
-                        <div>
-                            <div className="text-slate-500 uppercase text-xs">Model</div>
-                            <div className="font-mono font-semibold text-lg text-slate-800">
-                                XGBoost v{prediction.model_version.replace(/^v/, '')}
-                            </div>
-                        </div>
+                        ))}
                     </div>
 
-                    {/* Progress bar visualizing probability */}
+                    {/* Progress bar */}
                     <div className="mt-4">
-                        <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                            <div
-                                className={`h-full ${isFraud ? 'bg-red-500' : 'bg-green-500'} transition-all duration-500`}
-                                style={{ width: `${probPercent}%` }}
+                        <div className="w-full h-2.5 rounded-full overflow-hidden"
+                             style={{ background: 'var(--border-default)' }}>
+                            <div className="h-full rounded-full transition-all duration-500"
+                                 style={{
+                                     width: `${probPercent}%`,
+                                     background: isFraud ? 'var(--status-danger)' : 'var(--status-success)',
+                                 }}
                             />
                         </div>
                     </div>
