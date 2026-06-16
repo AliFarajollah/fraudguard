@@ -12,6 +12,10 @@ import { ReviewQueuePage } from './pages/ReviewQueuePage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { PendingApprovalPage } from './pages/PendingApprovalPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { AuditLogPage } from './pages/AuditLogPage';
+import { ModelPerformancePage } from './pages/ModelPerformancePage';
+import { ReportsPage } from './pages/ReportsPage';
 
 function App() {
   return (
@@ -40,6 +44,15 @@ function App() {
           <Route path="/reviews" element={
             <ProtectedRoute><ReviewQueuePage /></ProtectedRoute>
           } />
+          <Route path="/profile" element={
+            <ProtectedRoute><ProfilePage /></ProtectedRoute>
+          } />
+          <Route path="/reports" element={
+            <ProtectedRoute><ReportsPage /></ProtectedRoute>
+          } />
+          <Route path="/model/performance" element={
+            <ProtectedRoute><ModelPerformancePage /></ProtectedRoute>
+          } />
 
           {/* analyst + admin only */}
           <Route path="/score" element={
@@ -52,6 +65,11 @@ function App() {
           <Route path="/admin/users" element={
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminUsersPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/audit" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AuditLogPage />
             </ProtectedRoute>
           } />
 

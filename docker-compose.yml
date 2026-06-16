@@ -1,0 +1,66 @@
+# ============================================================
+# FraudGuard — Docker Compose
+# Runs all services: PostgreSQL, NestJS API, FastAPI ML, React Frontend
+# Usage: docker-compose up --build
+# ============================================================
+
+version: '3.8'
+
+services:
+  # ── PostgreSQL Database ──────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: fraudguard-db
+    environment:
+      POSTGRES_DB: fraudguard
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── NestJS Backend API ───────────────────────────────────────
+  api:
+    build: ./api
+    container_name: fraudguard-api
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: fraudguard
+      JWT_SECRET: docker-compose-dev-secret-change-in-production
+      JWT_EXPIRES_IN: 8h
+      ML_SERVICE_URL: http://ml-service:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── FastAPI ML Inference Service ─────────────────────────────
+  ml-service:
+    build: ./ml-service
+    container_name: fraudguard-ml
+    ports:
+      - '8000:8000'
+
+  # ── React Frontend ──────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    container_name: fraudguard-frontend
+    ports:
+      - '5173:80'
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

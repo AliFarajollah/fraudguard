@@ -1,0 +1,22 @@
+# FraudGuard ML Service — Python Dependencies
+# Install: pip install -r requirements.txt
+
+# Web Framework
+fastapi==0.115.12
+uvicorn[standard]==0.34.3
+
+# ML / Data Science
+scikit-learn==1.6.1
+xgboost==2.1.4
+imbalanced-learn==0.13.0
+pandas==2.2.3
+numpy==2.2.6
+joblib==1.5.1
+
+# Streamlit Dashboard (optional — for model exploration)
+streamlit==1.45.1
+plotly==6.1.2
+matplotlib==3.10.3
+
+# CORS middleware (included in FastAPI, listed for clarity)
+pydantic==2.11.3
