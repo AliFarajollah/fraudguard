@@ -46,6 +46,16 @@ export class PredictionsController {
         return this.service.getRiskDistribution();
     }
 
+    // ─── GET /predictions/performance ─────────────────────────────────────────
+
+    @Get('performance')
+    @ApiOperation({ summary: 'Production model performance metrics derived from analyst feedback' })
+    @ApiResponse({ status: 200, description: '{ daily[], precision, recall, total_reviewed }' })
+    @ApiResponse({ status: 401, description: 'Missing or invalid JWT' })
+    getPerformance() {
+        return this.service.getPerformance();
+    }
+
     // ─── GET /predictions/stats ───────────────────────────────────────────────
 
     @Get('stats')

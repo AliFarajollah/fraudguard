@@ -13,6 +13,7 @@ import { User } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
+import { AuditService } from '../audit/audit.service';
 
 /**
  * AuthService — business logic for registration and login.
@@ -30,6 +31,7 @@ export class AuthService {
         @InjectRepository(User)
         private readonly usersRepo: Repository<User>,
         private readonly jwtService: JwtService,
+        private readonly audit: AuditService,
     ) { }
 
     /**
@@ -53,6 +55,8 @@ export class AuthService {
 
         const user = this.usersRepo.create({ email: dto.email, passwordHash, role, status });
         await this.usersRepo.save(user);
+
+        void this.audit.log('USER_REGISTERED', user.id, 'user', user.id);
 
         if (status === 'pending') {
             // Do NOT issue a JWT — the account needs approval first
@@ -94,6 +98,7 @@ export class AuthService {
             );
         }
 
+        void this.audit.log('USER_LOGIN', user.id, 'user', user.id);
         return this.buildAuthResponse(user);
     }
 

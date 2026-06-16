@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
+import { UserProfileController } from './user-profile.controller';
 
 /**
  * UsersModule — bundles everything user-related.
@@ -14,7 +15,7 @@ import { UsersController } from './users.controller';
 @Module({
     imports: [TypeOrmModule.forFeature([User])],
     providers: [UsersService],
-    controllers: [UsersController],
+    controllers: [UsersController, UserProfileController],
     exports: [UsersService],
 })
 export class UsersModule { }

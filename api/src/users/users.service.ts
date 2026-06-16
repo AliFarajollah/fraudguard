@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { User, UserRole, UserStatus } from './entities/user.entity';
 
 /**
@@ -41,6 +42,26 @@ export class UsersService {
 
     async findByEmail(email: string): Promise<User | null> {
         return this.usersRepo.findOne({ where: { email } });
+    }
+
+    getProfile(user: User): Omit<User, 'passwordHash'> {
+        const { passwordHash, ...safe } = user;
+        return safe;
+    }
+
+    async updatePassword(
+        userId: number,
+        currentPassword: string,
+        newPassword: string,
+    ): Promise<void> {
+        const user = await this.usersRepo.findOne({ where: { id: userId } });
+        if (!user) throw new NotFoundException('User not found');
+
+        const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+        if (!valid) throw new UnauthorizedException('Current password is incorrect');
+
+        user.passwordHash = await bcrypt.hash(newPassword, 10);
+        await this.usersRepo.save(user);
     }
 
     // ─── Mutations ────────────────────────────────────────────────────────────

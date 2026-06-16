@@ -12,6 +12,7 @@ import { Transaction } from '../transactions/entities/transaction.entity';
 import { User } from '../users/entities/user.entity';
 import type { CreateReviewDto } from './dto/create-review.dto';
 import type { ReviewDecision } from './entities/review.entity';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class ReviewsService {
@@ -24,6 +25,8 @@ export class ReviewsService {
 
         @InjectRepository(Transaction)
         private readonly txRepo: Repository<Transaction>,
+
+        private readonly audit: AuditService,
     ) {}
 
     /**
@@ -66,6 +69,8 @@ export class ReviewsService {
         // 4. Update the linked transaction status to 'reviewed'
         await this.txRepo.update(prediction.transaction.id, { status: 'reviewed' });
 
+        void this.audit.log('REVIEW_SUBMITTED', analyst.id, 'review', review.id, { decision: dto.decision });
+
         return review;
     }
 
@@ -77,6 +82,46 @@ export class ReviewsService {
             relations: ['prediction', 'prediction.transaction', 'analyst'],
             order: { reviewedAt: 'DESC' },
         });
+    }
+
+    /**
+     * Returns SLA statistics: how long it takes from ML scoring to analyst review.
+     */
+    async getSla(): Promise<{
+        avg_hours_to_review: number;
+        under_1h: number;
+        under_4h: number;
+        under_24h: number;
+        over_24h: number;
+    }> {
+        const reviews = await this.reviewRepo.find({ relations: ['prediction'] });
+
+        if (reviews.length === 0) {
+            return { avg_hours_to_review: 0, under_1h: 0, under_4h: 0, under_24h: 0, over_24h: 0 };
+        }
+
+        let totalHours = 0;
+        let under_1h = 0;
+        let under_4h = 0;
+        let under_24h = 0;
+        let over_24h = 0;
+
+        for (const review of reviews) {
+            const hours = (review.reviewedAt.getTime() - review.prediction.createdAt.getTime()) / 3_600_000;
+            totalHours += hours;
+            if (hours < 1) under_1h++;
+            else if (hours < 4) under_4h++;
+            else if (hours < 24) under_24h++;
+            else over_24h++;
+        }
+
+        return {
+            avg_hours_to_review: parseFloat((totalHours / reviews.length).toFixed(2)),
+            under_1h,
+            under_4h,
+            under_24h,
+            over_24h,
+        };
     }
 
     /**

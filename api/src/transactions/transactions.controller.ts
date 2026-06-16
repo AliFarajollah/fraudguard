@@ -8,7 +8,10 @@ import {
     ParseIntPipe,
     UseGuards,
     Request,
+    Res,
+    Header,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
     ApiTags,
     ApiOperation,
@@ -76,14 +79,51 @@ export class TransactionsController {
         return this.service.getStats();
     }
 
+    // ─── GET /transactions/export ─────────────────────────────────────────────
+
+    @Get('export')
+    @Header('Content-Type', 'text/csv')
+    @ApiOperation({ summary: 'Export all transactions as a CSV file' })
+    @ApiResponse({ status: 200, description: 'CSV file download' })
+    @ApiResponse({ status: 401, description: 'Missing or invalid JWT' })
+    async exportCsv(@Res() res: Response) {
+        const date = new Date().toISOString().split('T')[0];
+        res.setHeader('Content-Disposition', `attachment; filename="fraudguard_transactions_${date}.csv"`);
+
+        const data = await this.service.findAllForExport();
+        const header = 'id,amount,occurred_at,status,fraud_probability,predicted_label,model_version,decision,reviewer,reviewed_at\n';
+        const rows = data.map(t =>
+            [
+                t.id,
+                t.amount,
+                t.occurredAt,
+                t.status,
+                t.prediction?.fraudProbability ?? '',
+                t.prediction?.predictedLabel ?? '',
+                t.prediction?.modelVersion ?? '',
+                (t.prediction as any)?.review?.decision ?? '',
+                (t.prediction as any)?.review?.analyst?.email ?? '',
+                (t.prediction as any)?.review?.reviewedAt ?? '',
+            ].join(',')
+        ).join('\n');
+
+        res.send(header + rows);
+    }
+
     // ─── GET /transactions ────────────────────────────────────────────────────
 
     @Get()
-    @ApiOperation({ summary: 'List all transactions — paginated, filterable by status and predicted label' })
+    @ApiOperation({ summary: 'List all transactions — paginated, filterable by status, label, amount, date, probability' })
     @ApiQuery({ name: 'page', required: false, example: 1 })
     @ApiQuery({ name: 'limit', required: false, example: 20 })
     @ApiQuery({ name: 'status', required: false, enum: ['pending', 'scored', 'reviewed'] })
     @ApiQuery({ name: 'predictedLabel', required: false, enum: ['true', 'false'] })
+    @ApiQuery({ name: 'minAmount', required: false })
+    @ApiQuery({ name: 'maxAmount', required: false })
+    @ApiQuery({ name: 'startDate', required: false, description: 'YYYY-MM-DD' })
+    @ApiQuery({ name: 'endDate', required: false, description: 'YYYY-MM-DD' })
+    @ApiQuery({ name: 'minProbability', required: false })
+    @ApiQuery({ name: 'maxProbability', required: false })
     @ApiResponse({ status: 200, description: 'Paginated list of transactions' })
     @ApiResponse({ status: 401, description: 'Missing or invalid JWT' })
     findAll(
@@ -91,12 +131,24 @@ export class TransactionsController {
         @Query('limit') limit = '20',
         @Query('status') status?: string,
         @Query('predictedLabel') predictedLabel?: string,
+        @Query('minAmount') minAmount?: string,
+        @Query('maxAmount') maxAmount?: string,
+        @Query('startDate') startDate?: string,
+        @Query('endDate') endDate?: string,
+        @Query('minProbability') minProbability?: string,
+        @Query('maxProbability') maxProbability?: string,
     ) {
         return this.service.findAll(
             parseInt(page, 10),
             parseInt(limit, 10),
             status,
             predictedLabel,
+            minAmount ? parseFloat(minAmount) : undefined,
+            maxAmount ? parseFloat(maxAmount) : undefined,
+            startDate,
+            endDate,
+            minProbability ? parseFloat(minProbability) : undefined,
+            maxProbability ? parseFloat(maxProbability) : undefined,
         );
     }
 

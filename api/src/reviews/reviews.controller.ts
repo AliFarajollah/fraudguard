@@ -40,6 +40,16 @@ export class ReviewsController {
         return this.service.create(dto, req.user as any);
     }
 
+    // ─── GET /reviews/sla ─────────────────────────────────────────────────────
+
+    @Get('sla')
+    @ApiOperation({ summary: 'Review SLA statistics — avg time from scoring to analyst decision' })
+    @ApiResponse({ status: 200, description: '{ avg_hours_to_review, under_1h, under_4h, under_24h, over_24h }' })
+    @ApiResponse({ status: 401, description: 'Missing or invalid JWT' })
+    getSla() {
+        return this.service.getSla();
+    }
+
     // ─── GET /reviews/stats ───────────────────────────────────────────────────
 
     @Get('stats')

@@ -10,6 +10,9 @@ import { AuthModule } from './auth/auth.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { PredictionsModule } from './predictions/predictions.module';
 import { ReviewsModule } from './reviews/reviews.module';
+import { AuditModule } from './audit/audit.module';
+import { CommentsModule } from './comments/comments.module';
+import { AlertSettingsModule } from './alert-settings/alert-settings.module';
 
 @Module({
   imports: [
@@ -46,6 +49,9 @@ import { ReviewsModule } from './reviews/reviews.module';
     TransactionsModule,
     PredictionsModule,
     ReviewsModule,
+    AuditModule,
+    CommentsModule,
+    AlertSettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

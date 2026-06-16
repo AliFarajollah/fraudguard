@@ -14,6 +14,7 @@ import { Prediction } from '../predictions/entities/prediction.entity';
 import { User } from '../users/entities/user.entity';
 import type { CreateTransactionDto } from './dto/create-transaction.dto';
 import type { BulkScoreDto } from './dto/bulk-score.dto';
+import { AuditService } from '../audit/audit.service';
 
 /** Shape of the JSON response from FastAPI POST /predict */
 interface MlPredictResponse {
@@ -44,6 +45,7 @@ export class TransactionsService {
 
         private readonly httpService: HttpService,
         private readonly configService: ConfigService,
+        private readonly audit: AuditService,
     ) {
         // ML_SERVICE_URL is set in api/.env (e.g., http://localhost:8000)
         this.mlUrl = this.configService.get<string>('ML_SERVICE_URL') ?? 'http://localhost:8000';
@@ -104,6 +106,10 @@ export class TransactionsService {
         await this.txRepo.save(tx);
 
         // Step 5 — return transaction with nested prediction
+        void this.audit.log('TRANSACTION_SCORED', user.id, 'transaction', tx.id, {
+            amount: dto.amount,
+            fraudProbability: mlResult.fraud_probability,
+        });
         return this.findOne(tx.id);
     }
 
@@ -132,6 +138,7 @@ export class TransactionsService {
             }
         }
 
+        void this.audit.log('BULK_UPLOAD', user.id, null, null, { count: processed });
         return { processed, failed, results };
     }
 
@@ -144,21 +151,24 @@ export class TransactionsService {
         limit: number,
         status?: string,
         predictedLabel?: string,
+        minAmount?: number,
+        maxAmount?: number,
+        startDate?: string,
+        endDate?: string,
+        minProbability?: number,
+        maxProbability?: number,
     ): Promise<{ data: Transaction[]; total: number; page: number; limit: number }> {
-        // skip = number of records to skip before taking the page
         const skip = (page - 1) * limit;
 
         const qb = this.txRepo
             .createQueryBuilder('tx')
             .leftJoinAndSelect('tx.uploadedBy', 'user')
-            .leftJoinAndSelect('tx.prediction', 'prediction') // requires relation defined on entity — see note below
+            .leftJoinAndSelect('tx.prediction', 'prediction')
             .orderBy('tx.createdAt', 'DESC')
             .skip(skip)
             .take(limit);
 
-        if (status) {
-            qb.andWhere('tx.status = :status', { status });
-        }
+        if (status) qb.andWhere('tx.status = :status', { status });
 
         if (predictedLabel === 'true') {
             qb.andWhere('prediction.predicted_label = :label', { label: true });
@@ -166,8 +176,25 @@ export class TransactionsService {
             qb.andWhere('prediction.predicted_label = :label', { label: false });
         }
 
+        if (minAmount !== undefined) qb.andWhere('tx.amount >= :minAmount', { minAmount });
+        if (maxAmount !== undefined) qb.andWhere('tx.amount <= :maxAmount', { maxAmount });
+        if (startDate) qb.andWhere('tx.occurred_at >= :startDate', { startDate });
+        if (endDate) qb.andWhere('tx.occurred_at <= :endDate', { endDate: `${endDate} 23:59:59` });
+        if (minProbability !== undefined) qb.andWhere('prediction.fraud_probability >= :minProbability', { minProbability });
+        if (maxProbability !== undefined) qb.andWhere('prediction.fraud_probability <= :maxProbability', { maxProbability });
+
         const [data, total] = await qb.getManyAndCount();
         return { data, total, page, limit };
+    }
+
+    async findAllForExport(): Promise<Transaction[]> {
+        return this.txRepo
+            .createQueryBuilder('tx')
+            .leftJoinAndSelect('tx.prediction', 'prediction')
+            .leftJoinAndSelect('prediction.review', 'review')
+            .leftJoinAndSelect('review.analyst', 'analyst')
+            .orderBy('tx.createdAt', 'DESC')
+            .getMany();
     }
 
     /**

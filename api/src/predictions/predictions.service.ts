@@ -2,12 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Prediction } from './entities/prediction.entity';
+import { Review } from '../reviews/entities/review.entity';
 
 @Injectable()
 export class PredictionsService {
     constructor(
         @InjectRepository(Prediction)
         private readonly predRepo: Repository<Prediction>,
+
+        @InjectRepository(Review)
+        private readonly reviewRepo: Repository<Review>,
     ) {}
 
     /**
@@ -117,5 +121,52 @@ export class PredictionsService {
             range: `${i * 10}–${(i + 1) * 10}%`,
             count: map.get(i) ?? 0,
         }));
+    }
+
+    /**
+     * Production performance metrics derived from analyst review feedback.
+     * Computes precision/recall from real verdicts, not initial test set metrics.
+     */
+    async getPerformance(): Promise<{
+        daily: Array<{ date: string; total: number; flagged: number; confirmed_fraud: number; false_positive: number }>;
+        precision: number;
+        recall: number;
+        total_reviewed: number;
+    }> {
+        // Daily breakdown for the last 30 days
+        const daily = await this.predRepo
+            .createQueryBuilder('p')
+            .leftJoin('p.review', 'r')
+            .select("TO_CHAR(DATE_TRUNC('day', p.created_at), 'YYYY-MM-DD')", 'date')
+            .addSelect('COUNT(p.id)::int', 'total')
+            .addSelect("SUM(CASE WHEN p.predicted_label = true THEN 1 ELSE 0 END)::int", 'flagged')
+            .addSelect("SUM(CASE WHEN r.decision = 'confirmed_fraud' THEN 1 ELSE 0 END)::int", 'confirmed_fraud')
+            .addSelect("SUM(CASE WHEN r.decision = 'false_positive' THEN 1 ELSE 0 END)::int", 'false_positive')
+            .where("p.created_at >= NOW() - INTERVAL '30 days'")
+            .groupBy("DATE_TRUNC('day', p.created_at)")
+            .orderBy("DATE_TRUNC('day', p.created_at)", 'ASC')
+            .getRawMany<{ date: string; total: string; flagged: string; confirmed_fraud: string; false_positive: string }>();
+
+        // Overall verdict counts for precision/recall
+        const confirmed = await this.reviewRepo.count({ where: { decision: 'confirmed_fraud' } });
+        const fp = await this.reviewRepo.count({ where: { decision: 'false_positive' } });
+        const total_reviewed = await this.reviewRepo.count();
+        const total_flagged = await this.predRepo.count({ where: { predictedLabel: true } });
+
+        const precision = (confirmed + fp) > 0 ? confirmed / (confirmed + fp) : 0;
+        const recall = total_flagged > 0 ? confirmed / total_flagged : 0;
+
+        return {
+            daily: daily.map(d => ({
+                date: d.date,
+                total: parseInt(d.total ?? '0', 10),
+                flagged: parseInt(d.flagged ?? '0', 10),
+                confirmed_fraud: parseInt(d.confirmed_fraud ?? '0', 10),
+                false_positive: parseInt(d.false_positive ?? '0', 10),
+            })),
+            precision: parseFloat(precision.toFixed(3)),
+            recall: parseFloat(recall.toFixed(3)),
+            total_reviewed,
+        };
     }
 }
