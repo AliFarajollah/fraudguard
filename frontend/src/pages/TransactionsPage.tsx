@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { NavBar } from '../components/NavBar';
 import { MetricCard } from '../components/MetricCard';
 import { BulkUploadModal } from '../components/BulkUploadModal';
+import { FraudAlertBanner } from '../components/FraudAlertBanner';
 import { apiClient } from '../api/client';
 import axios from 'axios';
 import type { Transaction, TransactionStats, PaginatedResponse } from '../types';
@@ -35,7 +36,13 @@ export function TransactionsPage() {
     const [total, setTotal] = useState(0);
     const [statusFilter, setStatusFilter] = useState('');
     const [labelFilter, setLabelFilter] = useState('');
+    const [minAmount, setMinAmount] = useState('');
+    const [maxAmount, setMaxAmount] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [minProbability, setMinProbability] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
     const LIMIT = 20;
     const totalPages = Math.max(1, Math.ceil(total / LIMIT));
@@ -47,6 +54,11 @@ export function TransactionsPage() {
             const params: Record<string, string | number> = { page, limit: LIMIT };
             if (statusFilter) params['status'] = statusFilter;
             if (labelFilter) params['predictedLabel'] = labelFilter;
+            if (minAmount) params['minAmount'] = minAmount;
+            if (maxAmount) params['maxAmount'] = maxAmount;
+            if (startDate) params['startDate'] = startDate;
+            if (endDate) params['endDate'] = endDate;
+            if (minProbability) params['minProbability'] = minProbability;
 
             const [txRes, statsRes] = await Promise.all([
                 apiClient.get<PaginatedResponse<Transaction>>('/transactions', { params }),
@@ -64,14 +76,32 @@ export function TransactionsPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, statusFilter, labelFilter]);
+    }, [page, statusFilter, labelFilter, minAmount, maxAmount, startDate, endDate, minProbability]);
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const res = await apiClient.get('/transactions/export', { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data as BlobPart]));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `fraudguard_transactions_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch {
+            // silently ignore
+        } finally {
+            setExporting(false);
+        }
+    };
 
     useEffect(() => { void fetchData(); }, [fetchData]);
-    useEffect(() => { setPage(1); }, [statusFilter, labelFilter]);
+    useEffect(() => { setPage(1); }, [statusFilter, labelFilter, minAmount, maxAmount, startDate, endDate, minProbability]);
 
     return (
         <div className="min-h-screen page-bg">
             <NavBar />
+            <FraudAlertBanner />
             <main className="max-w-7xl mx-auto px-6 py-8">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
@@ -81,14 +111,25 @@ export function TransactionsPage() {
                             All submitted credit card transactions and their fraud scores
                         </p>
                     </div>
-                    <button id="btn-open-bulk-upload" onClick={() => setModalOpen(true)}
-                            className="btn-primary text-sm flex items-center gap-2">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
-                        </svg>
-                        Upload CSV
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => void handleExport()}
+                                disabled={exporting}
+                                className="btn-ghost text-sm flex items-center gap-2 disabled:opacity-50">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            {exporting ? 'Exporting…' : 'Export CSV'}
+                        </button>
+                        <button id="btn-open-bulk-upload" onClick={() => setModalOpen(true)}
+                                className="btn-primary text-sm flex items-center gap-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            Upload CSV
+                        </button>
+                    </div>
                 </div>
 
                 {/* Stats */}
@@ -104,31 +145,60 @@ export function TransactionsPage() {
                 {error && <div className="alert-danger mb-4">{error}</div>}
 
                 {/* Filters */}
-                <div className="card p-4 mb-4 flex flex-wrap gap-4 items-center">
-                    <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Status:</label>
-                        <select id="filter-status" value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="input-field text-sm" style={{ padding: '4px 12px' }}>
-                            <option value="">All</option>
-                            <option value="pending">Pending</option>
-                            <option value="scored">Scored</option>
-                            <option value="reviewed">Reviewed</option>
-                        </select>
+                <div className="card p-4 mb-4">
+                    <div className="flex flex-wrap gap-4 items-end">
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Status:</label>
+                            <select id="filter-status" value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="input-field text-sm" style={{ padding: '4px 12px' }}>
+                                <option value="">All</option>
+                                <option value="pending">Pending</option>
+                                <option value="scored">Scored</option>
+                                <option value="reviewed">Reviewed</option>
+                            </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Prediction:</label>
+                            <select id="filter-label" value={labelFilter}
+                                    onChange={(e) => setLabelFilter(e.target.value)}
+                                    className="input-field text-sm" style={{ padding: '4px 12px' }}>
+                                <option value="">All</option>
+                                <option value="true">Fraud</option>
+                                <option value="false">Legitimate</option>
+                            </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Amount:</label>
+                            <input type="number" placeholder="Min" value={minAmount}
+                                   onChange={(e) => setMinAmount(e.target.value)}
+                                   className="input-field text-sm w-20" style={{ padding: '4px 8px' }} />
+                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>–</span>
+                            <input type="number" placeholder="Max" value={maxAmount}
+                                   onChange={(e) => setMaxAmount(e.target.value)}
+                                   className="input-field text-sm w-20" style={{ padding: '4px 8px' }} />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Date:</label>
+                            <input type="date" value={startDate}
+                                   onChange={(e) => setStartDate(e.target.value)}
+                                   className="input-field text-sm" style={{ padding: '4px 8px' }} />
+                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>–</span>
+                            <input type="date" value={endDate}
+                                   onChange={(e) => setEndDate(e.target.value)}
+                                   className="input-field text-sm" style={{ padding: '4px 8px' }} />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Min Prob:</label>
+                            <input type="number" placeholder="0.0–1.0" step="0.1" min="0" max="1"
+                                   value={minProbability}
+                                   onChange={(e) => setMinProbability(e.target.value)}
+                                   className="input-field text-sm w-24" style={{ padding: '4px 8px' }} />
+                        </div>
+                        <span className="ml-auto text-sm" style={{ color: 'var(--text-muted)' }}>
+                            {total} result{total !== 1 ? 's' : ''}
+                        </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Prediction:</label>
-                        <select id="filter-label" value={labelFilter}
-                                onChange={(e) => setLabelFilter(e.target.value)}
-                                className="input-field text-sm" style={{ padding: '4px 12px' }}>
-                            <option value="">All</option>
-                            <option value="true">Fraud</option>
-                            <option value="false">Legitimate</option>
-                        </select>
-                    </div>
-                    <span className="ml-auto text-sm" style={{ color: 'var(--text-muted)' }}>
-                        {total} result{total !== 1 ? 's' : ''}
-                    </span>
                 </div>
 
                 {/* Table */}

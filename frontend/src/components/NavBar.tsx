@@ -60,6 +60,7 @@ export function NavBar() {
     const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
     const [pendingCount, setPendingCount] = useState(0);
+    const [flaggedCount, setFlaggedCount] = useState(0);
 
     // Poll pending approvals count every 30s when logged in as admin
     useEffect(() => {
@@ -74,6 +75,20 @@ export function NavBar() {
         const interval = setInterval(fetchCount, 30_000);
         return () => clearInterval(interval);
     }, [user?.role]);
+
+    // Poll flagged predictions count every 60s for review queue badge
+    useEffect(() => {
+        if (!user) return;
+        const fetchFlagged = async () => {
+            try {
+                const { data } = await apiClient.get<unknown[]>('/predictions/flagged');
+                setFlaggedCount(data.length);
+            } catch { /* silently ignore */ }
+        };
+        void fetchFlagged();
+        const interval = setInterval(fetchFlagged, 60_000);
+        return () => clearInterval(interval);
+    }, [user]);
 
     const handleLogout = () => {
         logout();
@@ -123,7 +138,16 @@ export function NavBar() {
                         </NavLink>
 
                         <NavLink to="/reviews" className={navLinkClass}>
-                            Review Queue
+                            <span className="flex items-center gap-1.5">
+                                Review Queue
+                                {flaggedCount > 0 && (
+                                    <span className="text-xs font-bold px-1.5 py-0.5 rounded-full leading-none"
+                                          style={{ background: 'var(--status-danger)', color: 'white',
+                                                   fontSize: '10px', minWidth: '18px', textAlign: 'center' }}>
+                                        {flaggedCount}
+                                    </span>
+                                )}
+                            </span>
                         </NavLink>
 
                         {/* Analytics — visible to all, especially valuable for managers */}
@@ -138,26 +162,33 @@ export function NavBar() {
                             </span>
                         </NavLink>
 
-                        {/* Admin-only link — shows pending badge when approvals are waiting */}
+                        <NavLink to="/reports" className={navLinkClass}>Reports</NavLink>
+                        <NavLink to="/model/performance" className={navLinkClass}>Model Monitor</NavLink>
+                        <NavLink to="/profile" className={navLinkClass}>Profile</NavLink>
+
+                        {/* Admin-only links */}
                         {isAdmin && (
-                            <NavLink to="/admin/users" className={navLinkClass}>
-                                <span className="flex items-center gap-1.5 relative">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                        <circle cx="9" cy="7" r="4" />
-                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                    </svg>
-                                    Users
-                                    {pendingCount > 0 && (
-                                        <span className="text-xs font-bold px-1.5 py-0.5 rounded-full leading-none"
-                                              style={{ background: 'var(--status-danger)', color: 'white',
-                                                       fontSize: '10px', minWidth: '18px', textAlign: 'center' }}>
-                                            {pendingCount}
-                                        </span>
-                                    )}
-                                </span>
-                            </NavLink>
+                            <>
+                                <NavLink to="/admin/users" className={navLinkClass}>
+                                    <span className="flex items-center gap-1.5 relative">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                            <circle cx="9" cy="7" r="4" />
+                                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                        </svg>
+                                        Users
+                                        {pendingCount > 0 && (
+                                            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full leading-none"
+                                                  style={{ background: 'var(--status-danger)', color: 'white',
+                                                           fontSize: '10px', minWidth: '18px', textAlign: 'center' }}>
+                                                {pendingCount}
+                                            </span>
+                                        )}
+                                    </span>
+                                </NavLink>
+                                <NavLink to="/audit" className={navLinkClass}>Audit Log</NavLink>
+                            </>
                         )}
                     </div>
                 </div>

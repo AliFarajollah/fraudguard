@@ -3,6 +3,7 @@ import { mlClient } from '../api/client';
 import type { ModelInfo } from '../types';
 import { NavBar } from '../components/NavBar';
 import { MetricCard } from '../components/MetricCard';
+import { FraudAlertBanner } from '../components/FraudAlertBanner';
 
 export function DashboardPage() {
     const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
@@ -30,6 +31,7 @@ export function DashboardPage() {
     return (
         <div className="min-h-screen page-bg">
             <NavBar />
+            <FraudAlertBanner />
 
             <main className="max-w-7xl mx-auto px-6 py-8">
                 <div className="mb-8">

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { NavBar } from '../components/NavBar';
+import { CommentSection } from '../components/CommentSection';
 import { apiClient } from '../api/client';
 import axios from 'axios';
 import type { Transaction } from '../types';
@@ -245,6 +246,9 @@ export function TransactionDetailPage() {
                         )}
                     </div>
                 </div>
+
+                {/* Panel 4: Case Notes */}
+                <CommentSection transactionId={tx.id} />
             </main>
         </div>
     );
