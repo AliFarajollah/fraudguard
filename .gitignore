@@ -18,7 +18,7 @@ ml-service/data/processed/
 # ============================================================
 # Trained models (binary, can be regenerated)
 # ============================================================
-ml-service/models/*.pkl
+# ml-service/models/*.pkl   # committed for Railway deployment
 
 # ============================================================
 # Node.js
