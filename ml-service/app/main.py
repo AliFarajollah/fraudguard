@@ -15,8 +15,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-import os
-
 from app.predictor import predictor
 from app.schemas import (
     TransactionFeatures,
@@ -42,10 +40,9 @@ app = FastAPI(
 )
 
 # CORS — allow the Node.js API (and the React frontend for testing) to call us
-_cors_origins = os.environ.get("CORS_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins,
+    allow_origins=["*"],         # tighten in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

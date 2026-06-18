@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';   // NestJS backend
-const ML_URL  = import.meta.env.VITE_ML_URL  || 'http://localhost:8000';  // FastAPI ML service
+const API_URL = 'http://localhost:3000';          // NestJS backend
+const ML_URL = 'http://localhost:8000';          // FastAPI ML service
 
 // Separate axios instances so we can attach different interceptors if needed
 export const apiClient = axios.create({
